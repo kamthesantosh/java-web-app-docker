@@ -2,26 +2,29 @@ node{
     def buildNumber = BUILD_NUMBER
     stage('git clone'){
         git credentialsId: 'f7d016b1-4ea5-4a86-a8d3-4576926e2153', url: 'https://github.com/kamthesantosh/java-web-app-docker.git'
-    }
+   }
     stage('Build mvn package'){
         sh "mvn clean package"
-    }
+           }
     stage('Build docker img'){
  sh "docker build -t santoshkamthe9121/java_webapp:${buildNumber} ."       
     }
     stage('docker login nd push img to registry'){
-        withCredentials([string(credentialsId: 'dockerhub_passwd', variable: 'dockerpasswd')]) {
+  withCredentials([usernamePassword(credentialsId: 'docker-credentials-id', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USERNAME')]) {
     // some block
-    sh "docker login -u santoshkamthe9121 -p ${dockerpasswd}"
+     sh """
+    echo \${DOCKER_PASSWORD} | docker login -u \${DOCKER_USERNAME} --password-stdin 
+      """
 }
-      sh "docker push santoshkamthe9121/java_webapp:${buildNumber}"  
-    }
-    stage('deploy app to docker container'){
-        sshagent(['326c492d-4b7a-4a7c-920e-aa52b1ed8f1f']) {
+         sh "docker push santoshkamthe9121/java_webapp:${buildNumber}"  
+   }
+    stage('deploy app to docker container') {
+    sshagent(['Docker_DevServer_SSH']) {
     // some block
-    sh "ssh -o StrictHostkeyChecking=no ubuntu@54.90.136.18 docker rm -f javawebapp || true"
-sh "ssh -o StrictHostkeyChecking=no  ubuntu@54.90.136.18 docker run -d -p 8080:8080 --name javawebapp santoshkamthe9121/java_webapp:${buildNumber}  "
-            
-        }
-    }
+ sh "ssh -o StrictHostkeyChecking=no ubuntu@172.31.29.143 docker rm -f javawebapp || true"
+ sh "ssh -o StrictHostkeyChecking=no ubuntu@172.31.29.143 docker run -d -p 8080:8080 --name javawebapp santoshkamthe9121/java_webapp:${buildNumber}"
+    
+}
+}
+
 }
