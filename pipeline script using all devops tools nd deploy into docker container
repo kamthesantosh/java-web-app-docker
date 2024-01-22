@@ -1,0 +1,42 @@
+node {
+    def dockerImage
+    
+    stage('Checkout') {
+        // Checkout the source code from your version control system (e.g., Git)
+        git 'https://github.com/your-username/your-java-project.git'
+    }
+    
+    stage('Build') {
+        // Build your Java project
+        sh 'mvn clean package'
+    }
+
+    stage('Code Analysis') {
+        // Run SonarQube analysis
+        withSonarQubeEnv('SonarQube') {
+            sh 'mvn sonar:sonar'
+        }
+    }
+
+    stage('Package and Publish to Nexus') {
+        // Build Docker image
+        dockerImage = docker.build('your-nexus-repo/your-docker-image:latest')
+
+        // Push Docker image to Nexus
+        docker.withRegistry('https://your-nexus-repo', 'NexusCredentials') {
+            dockerImage.push()
+        }
+    }
+
+    stage('Deploy') {
+        // Deploy Docker container
+        sshagent(['your-ssh-credentials']) {
+            sh "ssh -o StrictHostKeyChecking=no user@your-deployment-server 'docker-compose -f /path/to/docker-compose.yml up -d'"
+        }
+    }
+
+    stage('Cleanup') {
+        // Cleanup unused Docker images
+        sh 'docker system prune -f'
+    }
+}
